@@ -1,0 +1,5 @@
+version = 2
+prepare = [["sh", "./scripts/agentic-prepare.sh"]]
+
+[preview]
+command = ["yarn", "dev", "--watch=auto-optimized"]
