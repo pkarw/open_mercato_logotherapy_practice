@@ -1,0 +1,15 @@
+{
+  "logotherapy.visits.title": "Therapy visits",
+  "logotherapy.visits.create": "Book visit",
+  "logotherapy.visits.customer": "Customer",
+  "logotherapy.visits.employee": "Employee",
+  "logotherapy.visits.room": "Room",
+  "logotherapy.visits.therapyType": "Therapy type",
+  "logotherapy.visits.startAt": "Starts",
+  "logotherapy.visits.endAt": "Ends",
+  "logotherapy.visits.status": "Status",
+  "logotherapy.visits.notes": "Notes",
+  "logotherapy.visits.createTitle": "Book therapy visit",
+  "logotherapy.visits.save": "Book visit",
+  "logotherapy.visits.back": "Back to visits"
+}

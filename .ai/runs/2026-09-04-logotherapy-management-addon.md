@@ -21,6 +21,8 @@ Risks: The existing scaffold contains guessed framework contracts and one baseli
 
 ## Progress
 
+PR: #2 (link: https://github.com/pkarw/open_mercato_logotherapy_practice/pull/2)
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Visit foundation and booking vertical slice
