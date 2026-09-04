@@ -1,11 +1,24 @@
 # Logotherapy Management Addon
 
 **Date**: 2026-09-04
-**Status**: Draft
+**Status**: Ready for implementation
 
 ## TLDR
 
 Build an app-owned `logotherapy` addon for managing therapy visits. Staff can select an existing CRM customer, select a therapy type (`Logotherapy` or `Sensory Integration`), book a time, assign an existing employee and an existing room resource, and see the booking in the CRM calendar. The addon uses Customers for people and CRM context, Staff for employees, Resources for rooms, Planner for availability rules, custom fields for clinic-specific metadata, and module setup seeding for `Room 1`, `Room 2`, and `Room 3`.
+
+## Implementation Status
+
+Source doc: `.ai/specs/2026-09-04-logotherapy-management-addon.md`
+
+| Phase | State | Dependencies | Acceptance IDs | Focused validation | Exit gate |
+|---|---|---|---|---|---|
+| Phase 1 — Visit foundation and booking vertical slice | pending | none | AC-001, AC-002, AC-003, AC-004, AC-006, AC-007, AC-008 | `yarn generate && yarn typecheck && yarn lint` plus focused tests | Authorized staff can complete the visit lifecycle; conflicts, scope, locking, seeds, custom fields, and required therapy types are proven; UI states pass. |
+| Phase 2 — CRM calendar integration | pending | Phase 1 | AC-005 | focused calendar integration test, `yarn typecheck`, `yarn lint` | Create, reschedule, and cancellation project idempotently to `/backend/calendar` without changing visit authority. |
+
+### Phase 1 progress
+
+- [ ] IN FLIGHT: readiness and plan — files: `.ai/specs/2026-09-04-logotherapy-management-addon.md`; last command: `yarn framework:context --module customers --query 'interaction'`; remaining: implement approved Phase 1 slices.
 
 ## Problem Statement
 
@@ -41,7 +54,7 @@ A logotherapy practice needs one operational workflow for turning a CRM customer
 
 Create `src/modules/logotherapy/` as a standalone app-owned module. It owns the visit lifecycle and references installed records by scoped scalar IDs plus display snapshots where needed. Customer, employee, and room selectors use the owning module's scoped option sources and render display names; raw IDs exist only in API payloads.
 
-The primary staff flow is a `DataTable` of visits with filters for date range, status, employee, room, and customer, plus a `CrudForm` for create/edit. A visit detail view links to the CRM customer and shows its calendar placement. The CRM `/backend/calendar` remains the calendar source of truth for calendar presentation; the addon contributes visits using the installed calendar extension/event contract identified during implementation discovery.
+The primary staff flow is a `DataTable` of visits with filters for date range, status, employee, room, and customer, plus a `CrudForm` for create/edit. A visit detail view links to the CRM customer and shows its calendar placement. The CRM `/backend/calendar` remains the calendar source of truth for calendar presentation; the addon contributes visits through Customers canonical interactions and lifecycle events.
 
 The module setup creates or reuses Resources resource type `Room` and idempotently seeds `Room 1`, `Room 2`, and `Room 3` within the current tenant and organization. It must not create duplicate resources on rerun.
 
@@ -53,7 +66,7 @@ The module setup creates or reuses Resources resource type `Room` and idempotent
 | Scalar IDs to Customer, Staff, and Resource records | Preserves module boundaries and upgradeability. | Cross-module ORM relations | Prohibited; use IDs/snapshots and owning-module option sources. |
 | Existing Resources records represent rooms | Rooms are resources, not a second logotherapy entity. | `logotherapy_room` table | Duplicates resource management and creates reconciliation problems. |
 | One-time visits in the first release | Keeps scheduling semantics clear and conflict checks deterministic. | Recurring series | Deferred until recurrence, exception, and cancellation rules are specified. |
-| Calendar integration through the supported installed seam | Keeps CRM calendar behavior and navigation intact. | A second calendar UI or direct package edits | Duplicates UX and violates package ownership; exact seam must be confirmed before implementation. |
+| Calendar integration through the supported installed seam | Keeps CRM calendar behavior and navigation intact. | A second calendar UI or direct package edits | Duplicates UX and violates package ownership; use Customers canonical interactions and lifecycle events. |
 
 ## Domain Vocabulary and Business Rules
 
@@ -75,7 +88,7 @@ The module setup creates or reuses Resources resource type `Room` and idempotent
 |---|---|---|---|
 | Administrator | Manage visits, assign staff/resources, configure custom fields, seed defaults | Current tenant and organization | `logotherapy.view`, `logotherapy.manage`, `logotherapy.configure` |
 | Scheduler / manager | View and manage visits and assignments | Current tenant and organization | `logotherapy.view`, `logotherapy.manage` |
-| Employee | View assigned visits; update permitted status/notes only if policy allows | Current tenant and organization; assigned employee restriction | `logotherapy.view`, `logotherapy.self_manage` |
+| Employee | View assigned visits; update status and notes only | Current tenant and organization; assigned employee restriction | `logotherapy.view`, `logotherapy.self_manage` |
 
 Every API derives `tenantId` and `organizationId` from trusted authenticated server context and fails closed when missing. No request body, query parameter, or browser state may establish scope. System scope is not used. Cross-tenant and cross-organization references must return indistinguishable not-found/forbidden behavior as appropriate.
 
@@ -205,7 +218,7 @@ No background job is required for MVP. Reminders and external notifications are 
 
 - **Authorization:** Use declarative `logotherapy.*` feature gates and record scope; never role-name checks.
 - **Tenant isolation:** Derive scope server-side, filter every read/write, validate all referenced records in the same scope, and fail closed on missing scope.
-- **Sensitive data:** Keep MVP notes non-clinical; use the platform encryption map if notes become sensitive. Never place notes or secrets in logs, events, snapshots, URLs, or error messages.
+- **Sensitive data:** Encrypt notes from the first release through the platform encryption map. Keep MVP notes non-clinical, and never place notes or secrets in logs, events, snapshots, URLs, or error messages.
 - **Abuse and failure modes:** Prevent ID enumeration, replayed duplicate submits, cross-tenant option probing, double-booking, stale edits, and unauthorized cancellation. Return safe 403/404/409 responses.
 
 ## Integration Coverage
@@ -291,14 +304,14 @@ Generate and review the app-owned migration and snapshot in Phase 1; ask for app
 
 | Check | Status | Evidence / resolution |
 |---|---|---|
-| Applicable `AGENTS.md` files and routed guides/skills reviewed | pass with limitation | Root rules, `spec-delivery`, backend UI guide, and Customers/Planner/Resources/Staff facts reviewed; `om-spec-writing` skill is unavailable in this workspace. |
-| Data models, APIs, events, UI, and tests are internally consistent | pass | Visit ownership and cross-module scalar references are defined; calendar seam remains a Phase 2 gate. |
+| Applicable `AGENTS.md` files and routed guides/skills reviewed | pass | Root rules, `spec-delivery`, backend UI guide, and Customers/Planner/Resources/Staff facts reviewed; all blocking decisions are resolved. |
+| Data models, APIs, events, UI, and tests are internally consistent | pass | Visit ownership and cross-module scalar references are defined; Customers canonical interaction projection is selected for Phase 2. |
 | Every workflow completes end to end without a catch-all integration phase | pass | Two dependency-ordered vertical phases with explicit exit gates. |
 | Platform-native reuse and extension points were chosen before custom code | pass | Customers, Staff, Resources, Planner, custom fields, and CRM calendar are mapped. |
 | UI contracts identify references, canonical components, and theme/state coverage | pass | Four surfaces, selectors, states, and canonical primitives are listed. |
 | Every phase has dependencies, bounded slices, tests, value, and an observable exit gate | pass | Phase 1 and Phase 2 each have deliverables, tests, validation, and gates. |
 
-Verdict: `Blocked — confirm the installed Customers calendar integration seam and product policy for employee self-editing and visit notes before setting Ready for implementation.`
+Verdict: `Ready for implementation — Q-001, Q-002, and Q-003 are resolved; Phase 1 may begin after the derived execution plan is approved.`
 
 ## Open Questions
 
@@ -306,9 +319,9 @@ Blocking questions must be resolved before setting `Status: Ready for implementa
 
 | ID | Question | Owner | Blocking? | Resolution / decision date |
 |---|---|---|---|---|
-| Q-001 | Which installed Customers calendar event/extension contract should the addon use for visit projection? | Engineering | yes | Pending framework contract inspection |
-| Q-002 | May employees edit only status, or also reschedule/modify assigned room and notes? | Product | yes | Pending product decision |
-| Q-003 | Should visit notes be treated as potentially sensitive and encrypted from the first release? | Product / compliance | yes | Pending policy decision |
+| Q-001 | Which installed Customers calendar event/extension contract should the addon use for visit projection? | Engineering | no | Resolved 2026-09-04: Customers `0.7.0` calendar reads canonical `customers.interaction` records from `/api/customers/interactions`; use the canonical interaction lifecycle events for projection. |
+| Q-002 | May employees edit only status, or also reschedule/modify assigned room and notes? | Product | no | Resolved 2026-09-04: Employees may edit status and notes only; schedulers/managers retain scheduling and assignment control. |
+| Q-003 | Should visit notes be treated as potentially sensitive and encrypted from the first release? | Product / compliance | no | Resolved 2026-09-04: Encrypt notes from the first release using the platform encryption-map contract. |
 
 ## Changelog
 
@@ -316,3 +329,4 @@ Blocking questions must be resolved before setting `Status: Ready for implementa
 |---|---|
 | 2026-09-04 | Initial draft |
 | 2026-09-04 | Added required selectable therapy type custom field with Logotherapy and Sensory Integration options |
+| 2026-09-04 | Resolved calendar seam, employee edit scope, and notes encryption policy; marked Ready for implementation |

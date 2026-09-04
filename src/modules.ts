@@ -129,6 +129,8 @@ export const enabledModules: ModuleEntry[] = [
   { id: 'ratelimit_probe', from: '@app' },
 ]
 
+enabledModules.push({ id: 'logotherapy', from: '@app' })
+
 // Official modules activated via official-modules.json / official-modules.local.json
 // (managed by `yarn official-modules`; backed by the external/official-modules submodule).
 for (const entry of officialModuleEntries) {
